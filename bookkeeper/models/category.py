@@ -33,6 +33,9 @@ class Category:
         -------
         Объект класса Category или None
         """
+        repo: AbstractRepository['Category']
+        Category | None
+
         if self.parent is None:
             return None
         return repo.get(self.parent)
@@ -51,6 +54,9 @@ class Category:
         -------
         Объекты Category от родителя и выше до категории верхнего уровня
         """
+        repo: AbstractRepository['Category']
+        Iterator[Category]
+
         parent = self.get_parent(repo)
         if parent is None:
             return
@@ -72,6 +78,8 @@ class Category:
         -------
         Объекты Category, являющиеся подкатегориями разного уровня ниже данной.
         """
+        repo: AbstractRepository['Category']
+        Iterator[Category]
 
         def get_children(graph: dict[int | None, list['Category']],
                          root: int) -> Iterator['Category']:
@@ -110,9 +118,14 @@ class Category:
         -------
         Список созданных объектов Category
         """
+        tree: list[tuple[str, str | None]]
+        repo: AbstractRepository['Category']
+        list[Category]
+
         created: dict[str, Category] = {}
         for child, parent in tree:
             cat = cls(child, created[parent].pk if parent is not None else None)
             repo.add(cat)
             created[child] = cat
         return list(created.values())
+

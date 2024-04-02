@@ -17,9 +17,11 @@ class Expense:
     comment - комментарий
     pk - id записи в базе данных
     """
-    amount: int
-    category: int
-    expense_date: datetime = field(default_factory=datetime.now)
-    added_date: datetime = field(default_factory=datetime.now)
-    comment: str = ''
-    pk: int = 0
+
+    def __init__(self, pk: int = 0, amount: float = 0.0, category: str = '', expense_date: str = ''):
+
+        self.pk = pk
+        self.amount = amount
+        self.category = category
+        self.expense_date = expense_date
+

@@ -4,8 +4,11 @@
 
 from itertools import count
 from typing import Any
+from datetime import datetime
+from typing import Optional
 
-from bookkeeper.repository.abstract_repository import AbstractRepository, T
+from bookkeeper.repository.abstract_repository import (AbstractRepository, T)
+from bookkeeper.models import Expense
 
 
 class MemoryRepository(AbstractRepository[T]):
@@ -41,3 +44,4 @@ class MemoryRepository(AbstractRepository[T]):
 
     def delete(self, pk: int) -> None:
         self._container.pop(pk)
+
