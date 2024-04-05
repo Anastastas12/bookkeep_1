@@ -24,4 +24,3 @@ class Expense:
         self.amount = amount
         self.category = category
         self.expense_date = expense_date
-

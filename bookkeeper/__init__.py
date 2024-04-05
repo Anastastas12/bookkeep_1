@@ -111,7 +111,7 @@ class PersonalFinanceApp:
         selected_item = self.tree.selection()
         if selected_item:
             item_id = self.tree.item(selected_item)["text"]  # Получаем id записи из первого столбца
-            self.cursor.execute("DELETE FROM expenses WHERE pk = ?", (item_id,))
+            self.cursor.execute("DELETE FROM expenses WHERE id = ?", (item_id,))
             self.conn.commit()
             self.show_expenses()  # Перезагрузка данных в таблице после удаления
             self.show_daily_expenses(self.repository)  # Обновление суммы расходов за день
@@ -133,7 +133,7 @@ class PersonalFinanceApp:
     def show_daily_expenses(self, repository):
         today = datetime.now().date()
         expenses = repository.get_expenses_by_day(today)
-        daily_expenses = sum(exp.amount for exp in expenses)
+        daily_expenses = sum(float(exp.amount) for exp in expenses)
         self.daily_expenses_value.config(text=str(daily_expenses))
 
     def show_weekly_expenses(self, repository):

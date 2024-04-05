@@ -132,10 +132,10 @@ class SqliteRepository(AbstractRepository[T]):
         """
         start_of_day = datetime(date.year, date.month, date.day, 0, 0, 0)
         end_of_day = datetime(date.year, date.month, date.day, 23, 59, 59)
-        query = "SELECT * FROM expenses WHERE date BETWEEN ? AND ?"
+        query = "SELECT amount, category, date FROM expenses WHERE date BETWEEN ? AND ?"
         self.cursor.execute(query, (start_of_day, end_of_day))
         rows = self.cursor.fetchall()
-        return [Expense(*row) for row in rows]
+        return [Expense(*row) for row in rows] # [row[1:] for row in rows]  #
 
     def get_expenses_by_month(self, year: int, month: int) -> list[Expense]:
         """
