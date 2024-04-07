@@ -6,6 +6,7 @@ from bookkeeper.repository.memory_repository import MemoryRepository
 from bookkeeper.repository.sqlite_repository import SqliteRepository
 from bookkeeper.models import Expense
 
+
 class PersonalFinanceApp:
     def __init__(self, root, repository):
         self.root = root
@@ -31,7 +32,8 @@ class PersonalFinanceApp:
         self.tree_frame.grid(row=3, columnspan=2, sticky="nsew", padx=10, pady=10)
 
         self.tree_scrollbar = ttk.Scrollbar(self.tree_frame, orient="vertical")
-        self.tree = ttk.Treeview(self.tree_frame, columns=("Категория", "Сумма", "Дата"), yscrollcommand=self.tree_scrollbar.set)
+        self.tree = ttk.Treeview(self.tree_frame, columns=("Категория", "Сумма", "Дата"),
+                                 yscrollcommand=self.tree_scrollbar.set)
         self.tree_scrollbar.config(command=self.tree.yview)
 
         self.tree_scrollbar.pack(side="right", fill="y")
@@ -43,7 +45,7 @@ class PersonalFinanceApp:
         self.tree.heading("#3", text="Дата")
 
         # Задаем ширину столбцов
-        self.tree.column("#0", width=0)  # Установка нулевой ширины столбца для номера
+        self.tree.column("#0", width=0)
         self.tree.column("#1", width=150)
         self.tree.column("#2", width=100)
         self.tree.column("#3", width=150)
@@ -89,14 +91,14 @@ class PersonalFinanceApp:
 
     def create_table(self):
         self.cursor.execute('''CREATE TABLE IF NOT EXISTS expenses
-                               (pk INTEGER PRIMARY KEY, category TEXT, amount REAL, date TEXT)''')
+                               (pk INTEGER PRIMARY KEY, amount REAL, category TEXT, date TEXT)''')
         self.conn.commit()
 
     def add_expense(self):
         category = self.category_combobox.get()
         amount = float(self.amount_entry.get())
         date = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Формат даты соответствует заголовку "Дата" в Treeview
-        self.cursor.execute("INSERT INTO expenses (category, amount, date) VALUES (?, ?, ?)", (category, amount, date))
+        self.cursor.execute("INSERT INTO expenses (category, amount, expense_date) VALUES (?, ?, ?)", (category, amount, date))
         self.conn.commit()
         self.amount_entry.delete(0, tk.END)
         print("Расход успешно добавлен.")
@@ -110,13 +112,25 @@ class PersonalFinanceApp:
     def delete_expense(self):
         selected_item = self.tree.selection()
         if selected_item:
-            item_id = self.tree.item(selected_item)["text"]  # Получаем id записи из первого столбца
-            self.cursor.execute("DELETE FROM expenses WHERE id = ?", (item_id,))
-            self.conn.commit()
-            self.show_expenses()  # Перезагрузка данных в таблице после удаления
-            self.show_daily_expenses(self.repository)  # Обновление суммы расходов за день
-            self.show_weekly_expenses(self.repository)  # Обновление суммы расходов за неделю
-            self.show_monthly_expenses(self.repository)  # Обновление суммы расходов за месяц
+            category = self.tree.item(selected_item, "values")[0]  # Получаем значение категории из второго столбца
+            amount = self.tree.item(selected_item, "values")[1]  # Получаем значение суммы из третьего столбца
+
+            # Находим запись в базе данных по категории и сумме
+            self.cursor.execute("SELECT pk FROM expenses WHERE category = ? AND amount = ?", (category, amount))
+            row = self.cursor.fetchone()
+            if row:
+                item_id = row[0]  # Получаем первичный ключ записи
+                self.cursor.execute("DELETE FROM expenses WHERE pk = ?", (item_id,))
+                self.conn.commit()
+                self.show_expenses()  # Перезагрузка данных в таблице после удаления
+                print("Запись успешно удалена.")
+
+                # Обновление сумм расходов за день, неделю и месяц
+                self.show_daily_expenses(self.repository)
+                self.show_weekly_expenses(self.repository)
+                self.show_monthly_expenses(self.repository)
+            else:
+                print("Ошибка: Запись не найдена в базе данных.")
         else:
             print("Выберите запись для удаления.")
 
@@ -125,10 +139,10 @@ class PersonalFinanceApp:
         for row in self.tree.get_children():
             self.tree.delete(row)
         # Получение данных из базы данных и загрузка их в таблицу
-        self.cursor.execute("SELECT * FROM expenses")
+        self.cursor.execute("SELECT category, amount, expense_date FROM expenses")
         rows = self.cursor.fetchall()
         for row in rows:
-            self.tree.insert("", "end", values=(row[1], row[2], row[3]))
+            self.tree.insert("", "end", values=(row[0], row[1], row[2]))
 
     def show_daily_expenses(self, repository):
         today = datetime.now().date()
@@ -137,16 +151,18 @@ class PersonalFinanceApp:
         self.daily_expenses_value.config(text=str(daily_expenses))
 
     def show_weekly_expenses(self, repository):
-        expenses = repository.get_expenses_by_week()
-        weekly_expenses = sum(exp.amount for exp in expenses)  # Преобразование в числа
+        today = datetime.now().date()
+        expenses = repository.get_expenses_by_week(today)
+        weekly_expenses = sum(float(exp.amount) for exp in expenses)
         self.weekly_expenses_value.config(text=str(weekly_expenses))
 
     def show_monthly_expenses(self, repository):
         today = datetime.now().date()
         start_of_month = today.replace(day=1)
         expenses = repository.get_expenses_by_month(start_of_month.year, start_of_month.month)
-        monthly_expenses = sum(exp.amount for exp in expenses)
+        monthly_expenses = sum(float(exp.amount) for exp in expenses)
         self.monthly_expenses_value.config(text=str(monthly_expenses))
+
 
 if __name__ == "__main__":
     root = tk.Tk()

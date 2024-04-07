@@ -117,67 +117,33 @@ class SqliteRepository(AbstractRepository[T]):
         self.conn.commit()
 
     def get_expenses_by_day(self, date: datetime) -> list[Expense]:
-        """
-        Получить все расходы за указанный день.
-
-        Parameters
-        ----------
-        date : datetime
-            Дата, за которую нужно получить расходы.
-
-        Returns
-        -------
-        list[Expense]
-            Список расходов за указанный день.
-        """
         start_of_day = datetime(date.year, date.month, date.day, 0, 0, 0)
         end_of_day = datetime(date.year, date.month, date.day, 23, 59, 59)
-        query = "SELECT amount, category, date FROM expenses WHERE date BETWEEN ? AND ?"
+        query = "SELECT amount, category, expense_date FROM expenses WHERE expense_date BETWEEN ? AND ?"
         self.cursor.execute(query, (start_of_day, end_of_day))
         rows = self.cursor.fetchall()
-        return [Expense(*row) for row in rows] # [row[1:] for row in rows]  #
+        return [Expense(*row) for row in rows]
 
     def get_expenses_by_month(self, year: int, month: int) -> list[Expense]:
-        """
-        Получить все расходы за указанный месяц и год.
-
-        Parameters
-        ----------
-        year : int
-            Год.
-        month : int
-            Месяц.
-
-        Returns
-        -------
-        list[Expense]
-            Список расходов за указанный месяц и год.
-        """
-    
         start_of_month = datetime(year, month, 1)
-        end_of_month = (start_of_month.replace(month=start_of_month.month % 12 + 1, day=1) - timedelta(days=1))
-        query = "SELECT * FROM expenses WHERE date BETWEEN ? AND ?"
+        end_of_month = start_of_month.replace(month=start_of_month.month % 12 + 1, day=1) - timedelta(days=1)
+        query = "SELECT amount, category, expense_date FROM expenses WHERE expense_date BETWEEN ? AND ?"
         self.cursor.execute(query, (start_of_month, end_of_month))
         rows = self.cursor.fetchall()
         return [Expense(*row) for row in rows]
 
-    def get_expenses_by_week(self) -> list[Expense]:
-        """
-        Получить все расходы за текущую неделю.
-
-        Returns
-        -------
-        list[Expense]
-            Список расходов за текущую неделю.
-        """
-        today = datetime.now().date()
-        start_of_week = today - timedelta(days=today.weekday())
+    def get_expenses_by_week(self, date: datetime) -> list[Expense]:
+        # Находим понедельник текущей недели
+        start_of_week = date - timedelta(days=date.weekday())
         end_of_week = start_of_week + timedelta(days=6)
-        query = "SELECT * FROM expenses WHERE date BETWEEN ? AND ?"
+
+        # Определяем границы для запроса в базу данных
+        start_of_week = datetime(start_of_week.year, start_of_week.month, start_of_week.day, 0, 0, 0)
+        end_of_week = datetime(end_of_week.year, end_of_week.month, end_of_week.day, 23, 59, 59)
+
+        query = "SELECT amount, category, expense_date FROM expenses WHERE expense_date BETWEEN ? AND ?"
         self.cursor.execute(query, (start_of_week, end_of_week))
         rows = self.cursor.fetchall()
-        # Преобразование строковых значений amount в числа типа float
-        expenses = [Expense(row[0], row[1], float(row[2]), row[3]) for row in rows]
+        expenses = [Expense(*row) for row in rows]
         return expenses
-
 
